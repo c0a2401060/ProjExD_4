@@ -46,7 +46,7 @@ class Bird(pg.sprite.Sprite):
         pg.K_DOWN: (0, +1),
         pg.K_LEFT: (-1, 0),
         pg.K_RIGHT: (+1, 0),
-    }
+    }   
 
     def __init__(self, num: int, xy: tuple[int, int]):
         """
@@ -72,6 +72,9 @@ class Bird(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = xy
         self.speed = 10
+        
+        self.state = "normal"  # stateの作成
+        self.hyper_life = 0  # hyper_lifeの作成
 
     def change_img(self, num: int, screen: pg.Surface):
         """
@@ -93,14 +96,29 @@ class Bird(pg.sprite.Sprite):
             if key_lst[k]:
                 sum_mv[0] += mv[0]
                 sum_mv[1] += mv[1]
+                
+            if key_lst[pg.K_LSHIFT]:  # 左Shiftを押しているとき高速化
+                self.speed = 20
+            else:
+                self.speed = 10
+        
+                sum_mv[1] += mv[1]  
         self.rect.move_ip(self.speed*sum_mv[0], self.speed*sum_mv[1])
+
         if check_bound(self.rect) != (True, True):
             self.rect.move_ip(-self.speed*sum_mv[0], -self.speed*sum_mv[1])
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):
             self.dire = tuple(sum_mv)
-            self.image = self.imgs[self.dire]
-        screen.blit(self.image, self.rect)
+            self.image = self.imgs[self.dire]  
 
+        if self.state == "hyper": 
+            self.image = pg.transform.laplacian(self.image)
+            self.hyper_life -= 1 
+
+        if self.hyper_life < 0:
+                self.state="normal"
+                    
+        screen.blit(self.image, self.rect)
 
 class Bomb(pg.sprite.Sprite):
     """
@@ -223,6 +241,8 @@ class Enemy(pg.sprite.Sprite):
         self.rect.move_ip(self.vx, self.vy)
 
 
+
+
 class Score:
     """
     打ち落とした爆弾，敵機の数をスコアとして表示するクラス
@@ -232,7 +252,7 @@ class Score:
     def __init__(self):
         self.font = pg.font.Font(None, 50)
         self.color = (0, 0, 255)
-        self.value = 0
+        self.value = 500
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         self.rect = self.image.get_rect()
         self.rect.center = 100, HEIGHT-50
@@ -241,27 +261,18 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
-# class Shield(pg.sprite.Sprite):
-#     def __init__(self, bird, life):
-#         super().__init__()
-#         self.image = pg.Surface(bird.rect)
-#         self.image.set_alpha(0)
-#         pg.draw.rect(self.image, (0, 0, 225), (0, 0, 20, 40))
-#         self.vx, self.vy = bird.dire
-#         kakudo = math.degrees(math.atan2(-self.vy, self.vx))
-#         self.image = pg.transform.rotozoom(self.image, kakudo, 1)
-#         self.rect = self.image.get_rect()
-#         self.life = life
-
-#     def update(self):
-#         # sheild_life=1
-#         # self.life -= 1
-#         if self.life < 0:
-#             self.kill()
-#             sheild_life-=1
-#             return sheild_life
-
-
+class Gravity(pg.sprite.Sprite):
+    def __init__(self,life:int):
+        super().__init__()
+        self.image = pg.Surface((WIDTH,HEIGHT))
+        self.rect = self.image.get_rect()
+        pg.draw.rect(self.image,(0,0,0),(0,0,WIDTH,HEIGHT))
+        self.image.set_alpha(128)
+        self.life = life
+    def update(self,):
+        self.life -= 1
+        if self.life < 0:
+            self.kill()
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -274,23 +285,27 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
-    #shields = pg.sprite.Group()
+    gras = pg.sprite.Group()
 
     tmr = 0
     #shields_life = 0
     clock = pg.time.Clock()
+
+    
     while True:
         key_lst = pg.key.get_pressed()
+        
+
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
-            # if event.type == pg.KEYDOWN and event.key == pg.K_s and score.value>=0:
-            #     shields.add(Shield(bird, 100))
-            #     shields_life += 1
-            #     score.value -= 50
-
+            if event.type == pg.KEYDOWN and event.key == pg.K_a:
+                if score.value>=200:
+                    gra = Gravity(400)
+                    gras.add(gra)
+                    score.value -= 200
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -311,6 +326,7 @@ def main():
         for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
             score.value += 1  # 1点アップ
+        
 
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
             bird.change_img(8, screen)  # こうかとん悲しみエフェクト
@@ -319,9 +335,34 @@ def main():
             time.sleep(2)
             return
         
-        # for sheild in pg.sprite.groupcollide(shields, bombs, False, True):
-        #     exps.add(Explosion(bomb, 50))
 
+
+        for emy in pg.sprite.groupcollide(emys, gras, True, False).keys():
+            exps.add(Explosion(emy, 100))
+        for bomb in pg.sprite.groupcollide(bombs, gras, True, False).keys():
+            exps.add(Explosion(bomb, 50))
+
+        for emy in pg.sprite.groupcollide(emys, gras, True, False).keys():
+            exps.add(Explosion(emy, 100))
+        for bomb in pg.sprite.groupcollide(bombs, gras, True, False).keys():
+            exps.add(Explosion(bomb, 50))
+        if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value >= 100:
+            bird.state= "hyper"
+            score.value -= 100
+            bird.hyper_life=500
+
+        if bird.state=="hyper":
+            for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
+                exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+                score.value += 1  # 1点アップ
+            
+        if bird.state=="normal":
+            for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
+                bird.change_img(8, screen)  # こうかとん悲しみエフェクト
+                score.update(screen)
+                pg.display.update()
+                time.sleep(2)
+                return
 
         bird.update(key_lst, screen)
         beams.update()
@@ -332,7 +373,11 @@ def main():
         bombs.draw(screen)
         exps.update()
         exps.draw(screen)
+        gras.update()
+        gras.draw(screen)
         score.update(screen)
+        #shields.update()
+        #shields.draw(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
