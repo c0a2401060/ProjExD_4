@@ -310,7 +310,7 @@ def main():
             time.sleep(2)
             return
 
-        for gra in pg.sprite.groupcollide(gras, emys, False, True).keys():
+        for emy in pg.sprite.groupcollide(emys, gras, True, False).keys():
             exps.add(Explosion(emy, 100))
         for bomb in pg.sprite.groupcollide(bombs, gras, True, False).keys():
             exps.add(Explosion(bomb, 50))
