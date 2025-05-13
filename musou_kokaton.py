@@ -94,6 +94,7 @@ class Bird(pg.sprite.Sprite):
             if key_lst[k]:
                 sum_mv[0] += mv[0]
                 sum_mv[1] += mv[1]
+                
             if key_lst[pg.K_LSHIFT]:  # 左Shiftを押しているとき高速化
                 self.speed = 20
             else:
