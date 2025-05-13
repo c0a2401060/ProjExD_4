@@ -241,6 +241,27 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+# class Shield(pg.sprite.Sprite):
+#     def __init__(self, bird, life):
+#         super().__init__()
+#         self.image = pg.Surface(bird.rect)
+#         self.image.set_alpha(0)
+#         pg.draw.rect(self.image, (0, 0, 225), (0, 0, 20, 40))
+#         self.vx, self.vy = bird.dire
+#         kakudo = math.degrees(math.atan2(-self.vy, self.vx))
+#         self.image = pg.transform.rotozoom(self.image, kakudo, 1)
+#         self.rect = self.image.get_rect()
+#         self.life = life
+
+#     def update(self):
+#         # sheild_life=1
+#         # self.life -= 1
+#         if self.life < 0:
+#             self.kill()
+#             sheild_life-=1
+#             return sheild_life
+
+
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -253,8 +274,10 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    #shields = pg.sprite.Group()
 
     tmr = 0
+    #shields_life = 0
     clock = pg.time.Clock()
     while True:
         key_lst = pg.key.get_pressed()
@@ -263,10 +286,17 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            # if event.type == pg.KEYDOWN and event.key == pg.K_s and score.value>=0:
+            #     shields.add(Shield(bird, 100))
+            #     shields_life += 1
+            #     score.value -= 50
+
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
             emys.add(Enemy())
+        # if tmr%400 == 0:
+        #     shields.update(screen)
 
         for emy in emys:
             if emy.state == "stop" and tmr%emy.interval == 0:
@@ -288,6 +318,10 @@ def main():
             pg.display.update()
             time.sleep(2)
             return
+        
+        # for sheild in pg.sprite.groupcollide(shields, bombs, False, True):
+        #     exps.add(Explosion(bomb, 50))
+
 
         bird.update(key_lst, screen)
         beams.update()
@@ -299,6 +333,8 @@ def main():
         exps.update()
         exps.draw(screen)
         score.update(screen)
+        shields.update()
+        shields.draw(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
