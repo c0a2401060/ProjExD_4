@@ -333,8 +333,6 @@ def main():
         exps.update()
         exps.draw(screen)
         score.update(screen)
-        shields.update()
-        shields.draw(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
