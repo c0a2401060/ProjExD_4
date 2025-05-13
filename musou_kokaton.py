@@ -223,6 +223,8 @@ class Enemy(pg.sprite.Sprite):
         self.rect.move_ip(self.vx, self.vy)
 
 
+
+
 class Score:
     """
     打ち落とした爆弾，敵機の数をスコアとして表示するクラス
@@ -241,6 +243,18 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class Gravity(pg.sprite.Sprite):
+    def __init__(self,life:int):
+        super().__init__()
+        self.image = pg.Surface((WIDTH,HEIGHT))
+        self.rect = self.image.get_rect()
+        pg.draw.rect(self.image,(0,0,0),(0,0,WIDTH,HEIGHT))
+        self.image.set_alpha(128)
+        self.life = life
+    def update(self,):
+        self.life -= 1
+        if self.life < 0:
+            self.kill()
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -253,6 +267,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    gras = pg.sprite.Group()
 
     tmr = 0
     clock = pg.time.Clock()
@@ -263,6 +278,11 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_a:
+                if score.value>=200:
+                    gra = Gravity(400)
+                    gras.add(gra)
+                    score.value -= 200
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -281,6 +301,7 @@ def main():
         for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
             score.value += 1  # 1点アップ
+        
 
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
             bird.change_img(8, screen)  # こうかとん悲しみエフェクト
@@ -288,6 +309,11 @@ def main():
             pg.display.update()
             time.sleep(2)
             return
+
+        for gra in pg.sprite.groupcollide(gras, emys, False, True).keys():
+            exps.add(Explosion(emy, 100))
+        for bomb in pg.sprite.groupcollide(bombs, gras, True, False).keys():
+            exps.add(Explosion(bomb, 50))
 
         bird.update(key_lst, screen)
         beams.update()
@@ -298,6 +324,8 @@ def main():
         bombs.draw(screen)
         exps.update()
         exps.draw(screen)
+        gras.update()
+        gras.draw(screen)
         score.update(screen)
         pg.display.update()
         tmr += 1
